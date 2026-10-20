@@ -21,6 +21,8 @@ BLUE = "#1f4e78"
 def load_all():
     with open(os.path.join(BASE, "process_months.json")) as f:
         months = json.load(f)
+    if isinstance(months, dict):
+        months = months.get("months", [])
     proc, coil, main_mt = [], [], {}
     for m in months:
         with open(os.path.join(BASE, f"process_data_{m}.json")) as f:
