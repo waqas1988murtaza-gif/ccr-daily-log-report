@@ -10,7 +10,7 @@ import os
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="CCR Process Parameters (PM2-CR-603)",
+st.set_page_config(page_title="CCR Daily Log Report",
                    page_icon="🏭", layout="wide")
 
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -36,7 +36,7 @@ for df in (pdf, cdf):
     if not df.empty:
         df["date"] = pd.to_datetime(df["date"])
 
-st.markdown(f"<h2 style='color:{BLUE};margin-bottom:0'>CCR Process Parameters — PM2-CR-603</h2>",
+st.markdown(f"<h2 style='color:{BLUE};margin-bottom:0'>CCR Daily Log Report</h2>",
             unsafe_allow_html=True)
 st.caption("Cu CCR Line • Internal Department Dashboard • Source: PM2-CR-603 register "
            "(Jul – 11 Oct 2026) • Coil weights matched from Coiler register PM2-CR-609")
