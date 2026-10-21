@@ -157,13 +157,26 @@ def load_snapshot():
 
 
 live = load_live()
+pdf_s, cdf_s = load_snapshot()
 if not live.empty:
     pdf = live
-    cdf = pd.DataFrame({"date": pdf["date"], "shift": pdf["shift"],
-                        "coil": pdf["coil"], "net_kg": pdf["weight_kg"]})
+    # Production totals: for the closed Jul-Oct 2026 months use the verified
+    # Coiler totals (some production days have no 603 page at all). For new
+    # months, count each coil's weight ONCE — a coil spanning two shifts is
+    # written in both shifts' logs, so duplicates must not double-count.
+    live_cdf = (pdf.dropna(subset=["coil"])
+                   .drop_duplicates(subset=["coil"])
+                   .rename(columns={"weight_kg": "net_kg"})
+                   [["date", "shift", "coil", "net_kg"]])
+    snap_months = (set(cdf_s["date"].dt.strftime("%Y-%m"))
+                   if not cdf_s.empty else set())
+    live_cdf = live_cdf[~live_cdf["date"].dt.strftime("%Y-%m")
+                        .isin(snap_months)]
+    cdf = (pd.concat([cdf_s, live_cdf], ignore_index=True)
+           if not cdf_s.empty else live_cdf)
     LIVE = True
 else:
-    pdf, cdf = load_snapshot()
+    pdf, cdf = pdf_s, cdf_s
     LIVE = False
 
 top = st.columns([3, 1])
