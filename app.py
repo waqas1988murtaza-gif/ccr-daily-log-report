@@ -242,8 +242,7 @@ if not cb.empty:
                       xaxis=dict(gridcolor="#eef2f7"), showlegend=False)
     st.plotly_chart(fig, use_container_width=True)
     st.caption(f"{n_out} of {len(cb)} coils are outside the printed SV band "
-               f"780–820 °C (shaded). Readings are recorded exactly as written "
-               f"in the register.")
+               f"780–820 °C (shaded).")
 
 # ---------------------------------------------------------------- campaigns
 section("Campaigns")
@@ -271,17 +270,17 @@ else:
     st.info("No campaigns detected yet.")
 
 # ---------------------------------------------------------------- cross-check
-section("Cross-check — Coiler Register vs Main Dashboard")
+section("Cross-check — vs Main Dashboard")
 for m in sel_months:
     cm = cdf[cdf["date"].dt.strftime("%Y-%m") == m] if not cdf.empty else cdf
     ct = cm["net_kg"].sum() / 1000 if not cm.empty else 0.0
     mm = MAIN_MT.get(m)
     if mm:
-        note = " (register photos only up to 11 Oct — coverage difference)" if m == "2026-10" else ""
+        note = " (data available up to 11 Oct)" if m == "2026-10" else ""
         diff = ct - mm
         color = GREEN if abs(diff) <= 2 else AMBER
         st.markdown(
-            f"**{m}:** Coiler total **{ct:,.1f} MT** vs Main dashboard "
+            f"**{m}:** Daily Log total **{ct:,.1f} MT** vs Main dashboard "
             f"**{mm:,.1f} MT** → difference "
             f"<span style='color:{color};font-weight:700'>{diff:+.2f} MT</span>{note}",
             unsafe_allow_html=True)
@@ -290,31 +289,37 @@ for m in sel_months:
 section("Per-coil Data (Process Sheet)")
 if not p.empty:
     cols_show = [x for x in ["date", "shift", "supervisor", "operator", "coil",
-                             "weight_kg", "time", "castbar", "speed", "cc_in_p",
+                             "weight_kg", "time", "sf", "hf", "tundish",
+                             "castbar", "speed", "cc_in_t", "cc_in_p",
                              "cc_out_t", "rm", "em_t", "em_p", "q_t", "q_p",
                              "amp", "remarks"] if x in p.columns]
     show = p.sort_values(["date", "shift", "coil"])[cols_show].copy()
     show["date"] = show["date"].dt.strftime("%Y-%m-%d")
 
-    def sv_red(v):
-        try:
-            x = float(v)
-        except (TypeError, ValueError):
-            return ""
-        return ("background-color:#fee2e2;color:#b91c1c;font-weight:700"
-                if (x < 780 or x > 820) else "")
+    SV_BANDS = {"sf": (1150, 1250), "hf": (1120, 1150),
+                "tundish": (1110, 1150), "castbar": (780, 820)}
+    RED = "background-color:#fee2e2;color:#b91c1c;font-weight:700"
 
-    if "castbar" in show.columns:
-        st.caption("Cast Bar SV: 800 ±20 (780–820) — out-of-SV values are shown "
-                   "in red. Other printed SVs: SF 1200 ±50, HF 1120–1150, "
-                   "Tundish 1130 ±20 (recorded as '-' in the register).")
-        st.dataframe(show.style.map(sv_red, subset=["castbar"]),
-                     use_container_width=True, hide_index=True)
-    else:
-        st.dataframe(show, use_container_width=True, hide_index=True)
+    def make_red(lo, hi):
+        def f(v):
+            try:
+                x = float(v)
+            except (TypeError, ValueError):
+                return ""
+            return RED if (x < lo or x > hi) else ""
+        return f
+
+    st.caption("Any value outside its printed SV limit is shown in red — "
+               "SF Melt 1200 ±50 • HF Melt 1120–1150 • Tundish 1130 ±20 • "
+               "Cast Bar 800 ±20.")
+    sty = show.style
+    for _c, (_lo, _hi) in SV_BANDS.items():
+        if _c in show.columns:
+            sty = sty.map(make_red(_lo, _hi), subset=[_c])
+    st.dataframe(sty, use_container_width=True, hide_index=True)
 
 st.markdown("<div style='text-align:center;color:#94a3b8;font-size:12px;"
             "margin-top:24px'>CCR Daily Log Report • PM2-CR-603 • "
             "Data source: CCR Process Parameters Google Sheet (form entries) • "
-            "Snapshot fallback: register photos Jul – 11 Oct 2026</div>",
+            "Pakistan Cables, Nooriabad</div>",
             unsafe_allow_html=True)
